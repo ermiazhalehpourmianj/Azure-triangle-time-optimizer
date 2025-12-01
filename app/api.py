@@ -4,8 +4,8 @@ FastAPI app for the triangle-time system.
 Endpoints:
 - POST /predict_time
 - POST /log_task
-
-This is what you deploy to Azure App Service / Container Apps.
+- GET  /health
+- GET  /self-test
 """
 
 from __future__ import annotations
@@ -125,90 +125,80 @@ class LogTaskResponse(BaseModel):
     task: dict
 
 
-# --- Endpoints ---------------------------------------------------------------
+# --- Simple health + self-test -----------------------------------------------
 
 
-@app.post("/predict_time", response_model=PredictResponse)
-def predict_time(payload: TaskPayload) -> PredictResponse:
+@app.get("/health")
+def health() -> dict:
+    """Basic health check for Azure / load balancers."""
+    return {"status": "ok"}
+
+
+@app.get("/self-test")
+def self_test() -> dict:
     """
-    Predict the total time for a task.
+    End-to-end smoke test:
 
-    Body example (raw times):
-    {
-      "task_id": "TASK-123",
-      "T_gov": 2.0,
-      "T_azure": 3.0,
-      "T_ds": 1.0
-    }
+    1. Load example tasks from data/samples/example_tasks.csv
+    2. Load model params from model_params.json
+    3. Predict time for the first task
+    4. Append that task into the task log CSV
 
-    Or using proportions (if you already know triangle coords):
-    {
-      "task_id": "TASK-123",
-      "p_gov": 0.5,
-      "p_azure": 0.3,
-      "p_ds": 0.2
-    }
+    If this works on Azure, the whole pipeline is wired.
     """
+    # 1) load a sample file
+    sample_csv = REPO_ROOT / "data" / "samples" / "example_tasks.csv"
+    if not sample_csv.exists():
+        raise HTTPException(
+            status_code=500,
+            detail=f"Sample CSV not found at {sample_csv}",
+        )
+
+    tasks = load_tasks_from_csv(str(sample_csv))
+    if not tasks:
+        raise HTTPException(
+            status_code=500,
+            detail="No tasks found in example_tasks.csv",
+        )
+
+    task = tasks[0]
+
+    # 2) load model params
     try:
         params = load_model_params()
     except FileNotFoundError as e:
         raise HTTPException(status_code=500, detail=str(e))
 
-    task = Task(
-        task_id=payload.task_id,
-        T_gov=payload.T_gov,
-        T_azure=payload.T_azure,
-        T_ds=payload.T_ds,
-        T_total=payload.T_total,
-        p_gov=payload.p_gov,
-        p_azure=payload.p_azure,
-        p_ds=payload.p_ds,
-    )
-
+    # 3) predict time
     T_pred = predict_time_for_task(task, params)
 
-    return PredictResponse(
-        task_id=task.task_id,
-        T_pred=T_pred,
-        model_params=asdict(params),
-    )
+    # 4) log that task into the main CSV
+    append_task_to_csv(task)
+
+    return {
+        "ok": True,
+        "sample_task": asdict(task),
+        "T_pred": T_pred,
+        "model_params": asdict(params),
+        "task_log_csv": str(TASK_LOG_CSV_PATH),
+    }
+
+
+# --- Main endpoints ----------------------------------------------------------
+
+
+@app.post("/predict_time", response_model=PredictResponse)
+def predict_time(payload: TaskPayload) -> PredictResponse:
+    ...
+    # (leave your existing implementation as-is)
+    ...
 
 
 @app.post("/log_task", response_model=LogTaskResponse)
 def log_task(payload: TaskPayload) -> LogTaskResponse:
-    """
-    Log a completed task with actual time into a CSV log.
-
-    This is a simple "append to CSV" implementation.
-
-    Example:
-    {
-      "task_id": "TASK-123",
-      "T_gov": 2.0,
-      "T_azure": 3.0,
-      "T_ds": 1.0,
-      "T_total": 6.0
-    }
-    """
-    task = Task(
-        task_id=payload.task_id,
-        T_gov=payload.T_gov,
-        T_azure=payload.T_azure,
-        T_ds=payload.T_ds,
-        T_total=payload.T_total,
-        p_gov=payload.p_gov,
-        p_azure=payload.p_azure,
-        p_ds=payload.p_ds,
-    )
-
-    # Normalize proportions & total
-    task = update_task_proportions(task)
-    append_task_to_csv(task)
-
-    return LogTaskResponse(
-        status="ok",
-        task=asdict(task),
-    )
+    ...
+    # (leave your existing implementation as-is)
+    ...
 
 
 # Convenience for local dev:
@@ -217,3 +207,4 @@ if __name__ == "__main__":
     import uvicorn
 
     uvicorn.run("app.api:app", host="0.0.0.0", port=8000, reload=True)
+
