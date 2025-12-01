@@ -1,0 +1,4 @@
+task_id,T_gov,T_azure,T_ds,T_total
+TASK-1,2,3,1,6
+TASK-2,1,4,2,7
+TASK-3,5,1,0.5,6.5
