@@ -1,0 +1,44 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "triangle-time-optimizer"
+version = "0.1.0"
+description = "Triangle-based task time model (gov / Azure / data science) with a minimal Python + Azure stack."
+readme = "README.md"
+requires-python = ">=3.10"
+license = { text = "MIT" }
+authors = [
+  { name = "Your Name", email = "you@example.com" }
+]
+
+dependencies = [
+  "fastapi>=0.115.0",
+  "uvicorn[standard]>=0.30.0",
+  "pydantic>=2.7.0",
+  "pandas>=2.2.0"
+]
+
+[project.optional-dependencies]
+azure = [
+  "azure-identity>=1.17.0",
+  "azure-storage-blob>=12.20.0"
+]
+
+dev = [
+  "jupyterlab>=4.0.0",
+  "matplotlib>=3.8.0",
+  "pytest>=8.0.0",
+  "ruff>=0.5.0"
+]
+
+[project.urls]
+Homepage = "https://github.com/ermiazhalehpourmianj/triangle-time-optimizer"
+Source = "https://github.com/ermiazhalehpourmianj/triangle-time-optimizer"
+
+[tool.setuptools]
+package-dir = { "" = "src" }
+
+[tool.setuptools.packages.find]
+where = ["src"]
