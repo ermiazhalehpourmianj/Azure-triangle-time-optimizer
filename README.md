@@ -1,6 +1,8 @@
 # 🔺 Triangle Time Optimizer
 
-> **Triangle in, time out. No circle. No vibes. Just math.**
+### 🖼 Screenshot
+
+![Triangle Time Console UI](screenshots/triangle_console.png)
 
 This repo is a **minimal Python + Azure system** that does one thing relentlessly:
 
